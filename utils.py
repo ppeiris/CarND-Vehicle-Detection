@@ -4,14 +4,20 @@ import os
 import numpy as np
 import matplotlib.image as mpimg
 import cv2
-from featureextraction import *
+
+cars = []
+noncars = []
 """
 load car images
 """
 def loadCarImagePaths():
+    global cars
+    if len(cars) > 0:
+        return cars
+
     path = "img/vehicles/"
     fdirs = ["GTI_Far", "GTI_Left", "GTI_MiddleClose", "GTI_Right", "KITTI_extracted"]
-    cars = []
+
     for d in fdirs:
         cars += glob.glob(path + d + "/*.png")
     return cars
@@ -20,9 +26,13 @@ def loadCarImagePaths():
 load non-car-images
 """
 def loadNonCarImagePaths():
+    global noncars
+    if len(noncars) > 0:
+        return noncars
+
     path = "img/non-vehicles/"
     fdirs = ["Extras", "GTI"]
-    noncars = []
+
     for d in fdirs:
         noncars += glob.glob(path + d + "/*.png")
     return noncars

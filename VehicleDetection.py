@@ -17,63 +17,52 @@ import _pickle as cPickle
 from skimage.feature import hog
 from sklearn.model_selection import train_test_split
 from utils import *
-from featureextraction import *
+from hog_featureextraction import *
+from color_featureextraction import *
+from windowsearch import *
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
 
-# Parameters to tune
-colorspace = 'RGB' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
-orient = 9
-pix_per_cell = 8
-cell_per_block = 2
-hog_channel = 0 # Can be 0, 1, 2, or "ALL"
 
-""" HOG features
-
-Extract HOG features for cars and non car images
+tosave = {}
 """
-def extractHogFeatures():
-    print("Extracting HOG features...")
-    cars = loadCarImagePaths()
-    cars = cars[0:500] # for testing
+Compute color and hog feature vectors and combine them to get a one vector
+create a training and test data sets
+Normalize training and test data sets
+"""
+def getHogColorFeatures(features="HOG"):
+    global tosave
+    if features == 'HOG':
+        hog_car_features, hog_notcar_features = extractHogFeatures()
+        car_features = hog_car_features
+        notcar_features = hog_notcar_features
+    if features == 'COLOR':
+        color_car_features, color_notcar_features = extractcolorfeatures()
+        car_features = color_car_features
+        notcar_features = color_notcar_features
 
-    t=time.time()
-    car_features = extract_features(cars, cspace=colorspace, orient=orient,
-                        pix_per_cell=pix_per_cell, cell_per_block=cell_per_block,
-                        hog_channel=hog_channel)
+    if features == 'BOTH':
+        hog_car_features, hog_notcar_features = extractHogFeatures()
+        color_car_features, color_notcar_features = extractcolorfeatures()
+        print("combining both HOG and Color feature vectors to a one")
+        car_features = np.hstack([color_car_features, hog_car_features]).astype(np.float64)
+        notcar_features = np.hstack([color_notcar_features, hog_notcar_features]).astype(np.float64)
 
-
-    notcars = loadNonCarImagePaths()
-    notcars = notcars[0:500] # for testing
-
-    notcar_features = extract_features(notcars, cspace=colorspace, orient=orient,
-                        pix_per_cell=pix_per_cell, cell_per_block=cell_per_block,
-                        hog_channel=hog_channel)
-
-    print(round(time.time()-t, 2), 'Seconds to extract HOG features...')
-    return car_features, notcar_features
-
-def getLabledData():
-    car_features, notcar_features = extractHogFeatures()
-    # print((car_features))
-    # print((notcar_features))
-
-    features_ = []
-    features_.append(car_features)
-    features_.append(notcar_features)
-    # Create an array stack of feature vectors
-    X = np.vstack(features_).astype(np.float64)
-    # Define the labels vector
+    # combine color and hog features to a one feature vector
+    X = np.vstack([car_features, notcar_features]).astype(np.float64)
     y = np.hstack((np.ones(len(car_features)), np.zeros(len(notcar_features))))
     # Split up data into randomized training and test sets
+
+    print("Split features in to Training and Test data sets")
     rand_state = np.random.randint(0, 100)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=rand_state)
 
-
     # Fit a per-column scaler
     X_scaler = StandardScaler().fit(X_train)
-
+    tosave["X_scaler"] = X_scaler
+    tosave.update(getHogParams())
+    tosave.update(getColorParams())
     # Normalized data
     X_train = X_scaler.transform(X_train)
     X_test = X_scaler.transform(X_test)
@@ -84,8 +73,28 @@ def getLabledData():
 
     return X_train, y_train, X_test, y_test
 
-def buildClassifier():
-    X_train, y_train, X_test, y_test = getLabledData()
+
+""" return the SVM classifier
+
+- load data training data
+- build feature vectors
+- train a classifier
+- save trained classifier
+- return the classifier
+
+"""
+def getClassifier():
+    global tosave
+    filename = "params.pkl"
+    # Load the trained model from the disk if available
+    if os.path.isfile(filename):
+        print("Loading the Classifier %s from disk " %(filename))
+        with open(filename, 'rb') as fid:
+            paramsData = cPickle.load(fid)
+        return paramsData
+
+    # Train a model using features
+    X_train, y_train, X_test, y_test = getHogColorFeatures('BOTH')
     # Use a linear SVC
     svc = LinearSVC()
     # Check the training time for the SVC
@@ -103,8 +112,41 @@ def buildClassifier():
     print('For these',n_predict, 'labels: ', y_test[0:n_predict])
     t2 = time.time()
     print(round(t2-t, 5), 'Seconds to predict', n_predict,'labels with SVC')
+    tosave['svc'] = svc
+    with open(filename, 'wb') as fid:
+        cPickle.dump(tosave, fid)
+    print("Final model has been saved as %s" %(filename))
+    return tosave
+
+
+def sligingWindow(params):
+
+    # load a test image
+
+    img = mpimg.imread('test_images/test1.jpg')
+
+    ystart = 300
+    ystop = 656
+    scale = 1.5
+    svc = params["svc"]
+    X_scaler = params["X_scaler"]
+    orient = params["orient"]
+    pix_per_cell = params["pix_per_cell"]
+    cell_per_block = params["cell_per_block"]
+    spatial_size = params["spatial_size"]
+    hist_bins = params["hist_bins"]
+
+    out_img = find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
+
+    return out_img
+
+
+
+def main():
+    params = getClassifier()
+    sligingWindow(params)
 
 
 if __name__ == '__main__':
-    buildClassifier()
-    # processVideo()
+    main()
+
