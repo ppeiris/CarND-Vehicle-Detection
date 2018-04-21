@@ -25,14 +25,14 @@ from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
 
 
-tosave = {}
+params = None
 """
 Compute color and hog feature vectors and combine them to get a one vector
 create a training and test data sets
 Normalize training and test data sets
 """
 def getHogColorFeatures(features="HOG"):
-    global tosave
+    global params
     if features == 'HOG':
         hog_car_features, hog_notcar_features = extractHogFeatures()
         car_features = hog_car_features
@@ -60,16 +60,14 @@ def getHogColorFeatures(features="HOG"):
 
     # Fit a per-column scaler
     X_scaler = StandardScaler().fit(X_train)
-    tosave["X_scaler"] = X_scaler
-    tosave.update(getHogParams())
-    tosave.update(getColorParams())
+    params["X_scaler"] = X_scaler
     # Normalized data
     X_train = X_scaler.transform(X_train)
     X_test = X_scaler.transform(X_test)
 
-    print('Using:',orient,'orientations',pix_per_cell,
-            'pixels per cell and', cell_per_block,'cells per block')
-    print('Feature vector length:', len(X_train[0]))
+    # print('Using:',orient,'orientations',pix_per_cell,
+    #         'pixels per cell and', cell_per_block,'cells per block')
+    # print('Feature vector length:', len(X_train[0]))
 
     return X_train, y_train, X_test, y_test
 
@@ -83,18 +81,17 @@ def getHogColorFeatures(features="HOG"):
 - return the classifier
 
 """
-def getClassifier():
-    global tosave
-    filename = "params.pkl"
-    # Load the trained model from the disk if available
-    if os.path.isfile(filename):
-        print("Loading the Classifier %s from disk " %(filename))
-        with open(filename, 'rb') as fid:
-            paramsData = cPickle.load(fid)
-        return paramsData
+def loadClassifier():
+    global params
 
+    # if the model is already exists just return it
+    if params['svc']:
+        return True
+
+    # Start training the model
+    filename = getPklFileName()
     # Train a model using features
-    X_train, y_train, X_test, y_test = getHogColorFeatures('BOTH')
+    X_train, y_train, X_test, y_test = getHogColorFeatures('HOG')
     # Use a linear SVC
     svc = LinearSVC()
     # Check the training time for the SVC
@@ -112,39 +109,43 @@ def getClassifier():
     print('For these',n_predict, 'labels: ', y_test[0:n_predict])
     t2 = time.time()
     print(round(t2-t, 5), 'Seconds to predict', n_predict,'labels with SVC')
-    tosave['svc'] = svc
+    params['svc'] = svc
     with open(filename, 'wb') as fid:
-        cPickle.dump(tosave, fid)
+        cPickle.dump(params, fid)
     print("Final model has been saved as %s" %(filename))
-    return tosave
+    return True
 
-
-def sligingWindow(params):
-
+def sligingWindow():
+    global params
     # load a test image
-
     img = mpimg.imread('test_images/test1.jpg')
-
-    ystart = 300
-    ystop = 656
-    scale = 1.5
-    svc = params["svc"]
-    X_scaler = params["X_scaler"]
-    orient = params["orient"]
-    pix_per_cell = params["pix_per_cell"]
-    cell_per_block = params["cell_per_block"]
-    spatial_size = params["spatial_size"]
-    hist_bins = params["hist_bins"]
-
-    out_img = find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
+    imgparams = imgParams()
+    out_img = find_cars(
+        img,
+        imgparams["ystart"],
+        imgparams["ystop"],
+        imgparams["scale"],
+        params["colorspace"],
+        params["hog_channel"],
+        params["svc"],
+        None,
+        params["orient"],
+        params["pix_per_cell"],
+        params["cell_per_block"],
+        None,
+        None
+    )
 
     return out_img
 
 
 
 def main():
-    params = getClassifier()
-    sligingWindow(params)
+    global params
+    params = getParams()
+
+    loadClassifier()
+    sligingWindow()
 
 
 if __name__ == '__main__':

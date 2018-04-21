@@ -4,9 +4,54 @@ import os
 import numpy as np
 import matplotlib.image as mpimg
 import cv2
+import _pickle as cPickle
 
 cars = []
 noncars = []
+
+def getPklFileName():
+    return "params.pkl"
+
+"""
+HOG parameters
+"""
+def getParams():
+
+    filename = getPklFileName()
+    # Load the trained model from the disk if available
+    if os.path.isfile(filename):
+        print("Loading the Classifier %s from disk " %(filename))
+        with open(filename, 'rb') as fid:
+            paramsData = cPickle.load(fid)
+        return paramsData
+    else:
+        return {
+            # Hog params
+            "colorspace" : 'RGB', # Can be RGB, HSV, LUV, HLS, YUV, YCrCb,
+            "orient" : 9,
+            "pix_per_cell" : 8,
+            "cell_per_block" : 2,
+            "hog_channel" : 'ALL', # Can be 0, 1, 2, or "ALL",
+            "pixels_per_cell" : (8, 8),
+            "cells_per_block" : (2, 2),
+            "block_norm" : 'L2-Hys',
+            "transform_sqrt" : True,
+            "visualise" : False,
+            "feature_vector" : True,
+
+            # model
+            'svc' : None,
+            'X_scaler' : None,
+        }
+
+def imgParams():
+    return {
+        #
+        "ystart" : 400,
+        "ystop" : 656,
+        "scale" : 1.5
+    }
+
 """
 load car images
 """
@@ -75,11 +120,3 @@ def getRandomHogImagesToPrint():
 
     return images
 
-"""
-load card and none car images
-"""
-def loadImages():
-    pass
-
-def loadImagesShuffles():
-    pass
