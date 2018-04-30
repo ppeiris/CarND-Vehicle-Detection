@@ -27,12 +27,12 @@ def getParams():
     else:
         return {
             # Hog params
-            "colorspace" : 'RGB', # Can be RGB, HSV, LUV, HLS, YUV, YCrCb,
-            "orient" : 9,
-            "pix_per_cell" : 8,
+            "colorspace" : 'YUV', # Can be RGB, HSV, LUV, HLS, YUV, YCrCb,
+            "orient" : 11,
+            "pix_per_cell" : 16,
             "cell_per_block" : 2,
             "hog_channel" : 'ALL', # Can be 0, 1, 2, or "ALL",
-            "pixels_per_cell" : (8, 8),
+            "pixels_per_cell" : (16, 16),
             "cells_per_block" : (2, 2),
             "block_norm" : 'L2-Hys',
             "transform_sqrt" : True,

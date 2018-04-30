@@ -115,12 +115,26 @@ def loadClassifier():
     print("Final model has been saved as %s" %(filename))
     return True
 
+# Here is your draw_boxes function from the previous exercise
+def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
+    # Make a copy of the image
+    imcopy = np.copy(img)
+    # Iterate through the bounding boxes
+    for bbox in bboxes:
+        # Draw a rectangle given bbox coordinates
+        cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
+    # Return the image copy with boxes drawn
+
+
+    return imcopy
+
+
 def sligingWindow():
     global params
     # load a test image
     img = mpimg.imread('test_images/test1.jpg')
     imgparams = imgParams()
-    out_img = find_cars(
+    rectangles = find_cars(
         img,
         imgparams["ystart"],
         imgparams["ystop"],
@@ -136,7 +150,9 @@ def sligingWindow():
         None
     )
 
-    return out_img
+    print(len(rectangles), 'rectangles found in image')
+    # return rectangles
+    return draw_boxes(img, rectangles)
 
 
 
@@ -145,7 +161,7 @@ def main():
     params = getParams()
 
     loadClassifier()
-    sligingWindow()
+    # return sligingWindow()
 
 
 if __name__ == '__main__':

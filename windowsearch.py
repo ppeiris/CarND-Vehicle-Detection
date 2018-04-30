@@ -143,11 +143,11 @@ def find_cars(img, ystart, ystop, scale, cspace, hog_channel, svc, X_scaler, ori
             test_features = hog_features.reshape(1, -1)
             test_prediction = svc.predict(test_features)
 
-            if test_prediction == 1 or show_all_rectangles:
+            if test_prediction == 1:# or show_all_rectangles:
                 xbox_left = np.int(xleft*scale)
                 ytop_draw = np.int(ytop*scale)
                 win_draw = np.int(window*scale)
                 rectangles.append(((xbox_left, ytop_draw+ystart),(xbox_left+win_draw,ytop_draw+win_draw+ystart)))
 
-    print(len(rectangles), 'rectangles found in image')
+
     return rectangles
